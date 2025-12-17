@@ -1,0 +1,44 @@
+name: Simple Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Upload to FTP
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@4.0.0
+        with:
+          server: bilimeyolculuk.org.tr }          # آدرس هاست
+          username: ${{ secrets.FTP_USER }}        # اسم کاربری FTP
+          password: ${{ secrets.FTP_PASSWORD }}    # پسورد FTP
+          protocol: ftps
+          server-dir: /public_html/                # مسیر public root روی هاست
+          local-dir: ./                             # مسیر پروژه روی runner
+
+      # 3️⃣ Simple check
+      - name: Verify deployment
+        run: |
+          DEPLOY_URL="${{ secrets.DEPLOY_CHECK_URL }}"
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "No DEPLOY_CHECK_URL set, skipping verification."
+            exit 0
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" || echo "000")
+          echo "HTTP status code: $STATUS"
+          if [ "$STATUS" -ne 200 ]; then
+            echo "❌ Deployment failed!"
+            exit 1
+          else
+            echo "✅ Deployment succeeded!"
+          fi
+
